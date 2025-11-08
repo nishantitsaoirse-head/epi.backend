@@ -1,109 +1,114 @@
-name: Deploy Node.js Backend to AWS EC2
+name: 🚀 Deploy Backend to AWS EC2
 
 on:
   push:
     branches:
-      - main
+      - main  # Triggers deployment when code is pushed to main branch
 
 jobs:
-  build-test-deploy:
+  deploy:
+    name: Backend Deployment
     runs-on: ubuntu-24.04
 
     env:
-      NODE_ENV: production
-      AWS_REGION: ap-south-1
       EC2_HOST: ${{ secrets.EC2_HOST }}
       EC2_USER: ${{ secrets.EC2_USER }}
       PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
-      TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+      NODE_ENV: production
 
     steps:
+      # 🛠️ Step 1: Checkout the repo
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 🟢 Step 2: Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
+      # 📦 Step 3: Install dependencies (clean install)
       - name: Install dependencies
         run: npm ci
 
-      - name: Run lint check
+      # 🧹 Step 4: Run syntax validation
+      - name: Syntax validation
         run: |
-          echo "Running lint check..."
-          npx eslint . || echo "⚠️ Lint warnings detected, continuing deployment"
-
-      - name: Run basic syntax test
-        run: |
-          echo "Performing syntax validation..."
+          echo "🔍 Checking Node.js syntax..."
           node --check index.js
-          echo "✅ Node.js syntax validation passed"
 
-      - name: Deploy backend to EC2
+      # 🚀 Step 5: Deploy to EC2 via SSH
+      - name: Deploy application to EC2
         run: |
-          echo "Deploying to EC2 instance..."
           echo "${PRIVATE_KEY}" > private_key.pem
           chmod 600 private_key.pem
 
+          echo "🔐 Connecting to EC2 and deploying..."
           ssh -o StrictHostKeyChecking=no -i private_key.pem ${EC2_USER}@${EC2_HOST} << 'EOF'
             set -e
-            echo "📦 Pulling latest code..."
-            cd /var/www/epi-backend || exit 1
-            git fetch origin main
-            git reset --hard origin/main
+            echo "🚀 Deployment started on EC2..."
+
+            # Create or go to app directory
+            sudo mkdir -p /var/www/epi-backend
+            sudo chown ubuntu:ubuntu /var/www/epi-backend
+            cd /var/www/epi-backend
+
+            # Pull latest code or clone if not present
+            if [ -d .git ]; then
+              echo "🔄 Pulling latest changes..."
+              git fetch origin main
+              git reset --hard origin/main
+            else
+              echo "📦 Cloning repository..."
+              git clone https://github.com/nabeelanasaritsaoirse/epi-backend.git .
+            fi
 
             echo "📦 Installing dependencies..."
             npm ci --omit=dev
 
-            echo "🔄 Restarting backend service with PM2..."
+            echo "⚙️ Writing environment variables..."
+            cat <<EOT > .env
+                PORT=5000
+                MONGODB_URI=${{ secrets.MONGODB_URI }}
+                JWT_SECRET=${{ secrets.JWT_SECRET }}
+                FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}
+                FIREBASE_CLIENT_EMAIL=${{ secrets.FIREBASE_CLIENT_EMAIL }}
+                FIREBASE_PRIVATE_KEY=${{ secrets.FIREBASE_PRIVATE_KEY }}
+                RAZORPAY_KEY_ID=${{ secrets.RAZORPAY_KEY_ID }}
+                RAZORPAY_KEY_SECRET=${{ secrets.RAZORPAY_KEY_SECRET }}
+                EOT
+
+            echo "🚦 Restarting PM2 process..."
             pm2 restart epi-backend || pm2 start npm --name "epi-backend" -- start
             pm2 save
 
             echo "✅ Deployment completed successfully!"
           EOF
 
-      - name: Add Deployment Summary
+      # 🧾 Step 6: Add deployment summary
+      - name: Deployment summary
         if: success()
         run: |
           echo "## ✅ Backend Deployment Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Application:** Epi Backend" >> $GITHUB_STEP_SUMMARY
-          echo "**Environment:** AWS EC2 (${AWS_REGION})" >> $GITHUB_STEP_SUMMARY
-          echo "**Branch:** main" >> $GITHUB_STEP_SUMMARY
-          echo "**Host:** http://${{ env.EC2_HOST }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Deployed successfully via GitHub Actions" >> $GITHUB_STEP_SUMMARY
+          echo "- **Host:** ${{ secrets.EC2_HOST }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **User:** ${{ secrets.EC2_USER }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Process:** epi-backend" >> $GITHUB_STEP_SUMMARY
+          echo "- **Port:** 5000" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** Deployed successfully via GitHub Actions 🚀" >> $GITHUB_STEP_SUMMARY
 
-      # # 💬 Notify Microsoft Teams (Success)
-      # - name: Notify Teams on Success
+      # # 💬 Step 7: Optional Microsoft Teams Notification
+      # - name: Notify Teams (Success)
       #   if: success()
-      #   uses: skitionek/notify-microsoft-teams@v2
+      #   uses: toko-bifrost/ms-teams-deploy-card@v1
       #   with:
-      #     webhook_url: ${{ env.TEAMS_WEBHOOK_URL }}
-      #     job: ${{ toJson(job) }}
-      #     needs: ${{ toJson(needs) }}
-      #     overwrite: |
-      #       title: ✅ Epi Backend Deployment Successful
-      #       text: |
-      #         **Application:** Epi Backend  
-      #         **Environment:** AWS EC2  
-      #         **Branch:** main  
-      #         **Host:** http://${{ env.EC2_HOST }}  
-      #         ✅ Deployment completed successfully!
+      #     github-token: ${{ github.token }}
+      #     webhook-uri: ${{ secrets.TEAMS_WEBHOOK_URL }}
+      #     show-on-start: false
 
-      # # ❌ Notify Microsoft Teams (Failure)
-      # - name: Notify Teams on Failure
+      # - name: Notify Teams (Failure)
       #   if: failure()
-      #   uses: skitionek/notify-microsoft-teams@v2
+      #   uses: toko-bifrost/ms-teams-deploy-card@v1
       #   with:
-      #     webhook_url: ${{ env.TEAMS_WEBHOOK_URL }}
-      #     job: ${{ toJson(job) }}
-      #     needs: ${{ toJson(needs) }}
-      #     overwrite: |
-      #       title: ❌ Epi Backend Deployment Failed
-      #       text: |
-      #         **Application:** Epi Backend  
-      #         **Environment:** AWS EC2  
-      #         **Branch:** main  
-      #         ⚠️ Check GitHub Actions logs for details.
+      #     github-token: ${{ github.token }}
+      #     webhook-uri: ${{ secrets.TEAMS_WEBHOOK_URL }}
+      #     show-on-failure: true
