@@ -1,0 +1,72 @@
+# ===============================
+#  Node.js / Express Backend
+#  Epi Backend Project
+# ===============================
+
+#  Node dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment files (never commit credentials)
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+*.out
+*.pid
+*.seed
+*.gz
+
+# System & editor junk
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+#  Build or deployment artifacts
+dist/
+build/
+coverage/
+tmp/
+temp/
+.cache/
+*.tgz
+
+# PM2 ecosystem / dump files
+pm2.log
+pids/
+pids.json
+dump.pm2
+
+# SSH keys or credentials
+*.pem
+*.key
+*.crt
+*.csr
+
+# OS / lock / runtime junk
+*.lock
+*.bak
+*.old
+*.orig
+
+#  Testing / Reports
+test-results/
+coverage/
+reports/
+
+# GitHub Actions workflow cache
+.github/workflows/node_modules/
+.github/workflows/tmp/
+
+#  Misc
+*.tar.gz
+*.zip
