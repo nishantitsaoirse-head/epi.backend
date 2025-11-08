@@ -1,0 +1,153 @@
+{
+  "info": {
+    "_postman_id": "a6b12345-1234-4567-abcd-123456789012",
+    "name": "Referral Missed Payments Test",
+    "description": "Tests for the referral system's missed payment functionality",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Get Referral Details",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/referrals/details/{{referralId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["referrals", "details", "{{referralId}}"]
+        },
+        "description": "Get details of a specific referral"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Missed Payment Details",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/referrals/missed-payments/{{referralId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["referrals", "missed-payments", "{{referralId}}"]
+        },
+        "description": "Get missed payment details for a referral"
+      },
+      "response": []
+    },
+    {
+      "name": "Get User Transactions",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/referrals/transactions?userId={{userId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["referrals", "transactions"],
+          "query": [
+            {
+              "key": "userId",
+              "value": "{{userId}}"
+            }
+          ]
+        },
+        "description": "Get all transactions for a user"
+      },
+      "response": []
+    },
+    {
+      "name": "Process Daily Commissions",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/referrals/process-daily-commissions",
+          "host": ["{{baseUrl}}"],
+          "path": ["referrals", "process-daily-commissions"]
+        },
+        "description": "Trigger daily commission processing (admin only)"
+      },
+      "response": []
+    },
+    {
+      "name": "Get User's Withdrawals",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/referrals/withdrawals?userId={{userId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["referrals", "withdrawals"],
+          "query": [
+            {
+              "key": "userId",
+              "value": "{{userId}}"
+            }
+          ]
+        },
+        "description": "Get all withdrawals for a user"
+      },
+      "response": []
+    },
+    {
+      "name": "Request Withdrawal",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"amount\": 100,\n  \"paymentMethod\": \"UPI\",\n  \"paymentDetails\": {\n    \"upiId\": \"test@upi\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/referrals/withdraw",
+          "host": ["{{baseUrl}}"],
+          "path": ["referrals", "withdraw"]
+        },
+        "description": "Request a commission withdrawal"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Referral Dashboard",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/referrals/dashboard?userId={{userId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["referrals", "dashboard"],
+          "query": [
+            {
+              "key": "userId",
+              "value": "{{userId}}"
+            }
+          ]
+        },
+        "description": "Get the complete referral dashboard data"
+      },
+      "response": []
+    }
+  ],
+  "event": [],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "REPLACE_WITH_USER_ID",
+      "type": "string"
+    },
+    {
+      "key": "referralId",
+      "value": "REPLACE_WITH_REFERRAL_ID",
+      "type": "string"
+    }
+  ]
+} 
