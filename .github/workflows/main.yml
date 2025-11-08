@@ -122,7 +122,8 @@ jobs:
           from: ${{ secrets.EMAIL_USERNAME }}
           secure: true
           debug: true
-      
+          nodemailerdebug: true
+
       - name: Send Email (Failure)
         if: failure()
         uses: dawidd6/action-send-mail@v3
@@ -148,3 +149,4 @@ jobs:
           from: ${{ secrets.EMAIL_USERNAME }}
           secure: true
           debug: true
+          nodemailerdebug: true
