@@ -98,7 +98,7 @@ jobs:
             echo "✅ Deployment completed successfully!"
           EOF
       # ✅ Send email on successful deployment
-      - name: Send Success Email Notification
+      - name: Send Email (Success)
         if: success()
         uses: dawidd6/action-send-mail@v3
         with:
@@ -114,16 +114,16 @@ jobs:
             - Host: ${{ secrets.EC2_HOST }}
             - User: ${{ secrets.EC2_USER }}
             - Environment: Production
-            - Time: ${{ github.run_started_at }}
-      
-            Commit: ${{ github.sha }}
-            Repository: ${{ github.repository }}
+            - Commit: ${{ github.sha }}
+            - Repository: ${{ github.repository }}
       
             🚀 Deployment completed successfully via GitHub Actions!
-          to: "youremail@company.com"
-          from: "GitHub CI/CD Bot <noreply@github.com>"
-      # ❌ Send email on failed deployment
-      - name: Send Failure Email Notification
+          to: "nabeelanasarit.saoirse@gmail.com"
+          from: ${{ secrets.EMAIL_USERNAME }}
+          secure: true
+          debug: true
+      
+      - name: Send Email (Failure)
         if: failure()
         uses: dawidd6/action-send-mail@v3
         with:
@@ -133,21 +133,18 @@ jobs:
           password: ${{ secrets.EMAIL_PASSWORD }}
           subject: "❌ EPI Backend Deployment Failed"
           body: |
-            ⚠️ The deployment to AWS EC2 has failed!
+            ⚠️ The backend deployment to AWS EC2 has failed.
       
             Details:
             - Host: ${{ secrets.EC2_HOST }}
             - User: ${{ secrets.EC2_USER }}
+            - Branch: ${{ github.ref }}
+            - Commit: ${{ github.sha }}
             - Workflow: ${{ github.workflow }}
-            - Job: ${{ github.job }}
-            - Time: ${{ github.run_started_at }}
+            - Run URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       
-            Commit: ${{ github.sha }}
-            Repository: ${{ github.repository }}
-            Run logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-      
-            Please review the logs and fix the issue.
-          to: "youremail@company.com"
-          from: "GitHub CI/CD Bot <noreply@github.com>"
-
-              
+            Please review the logs in GitHub Actions.
+          to: "nabeelanasarit.saoirse@gmail.com"
+          from: ${{ secrets.EMAIL_USERNAME }}
+          secure: true
+          debug: true
