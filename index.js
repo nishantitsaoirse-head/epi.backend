@@ -23,7 +23,7 @@ const PORT = process.env.PORT || 5000;
 app.use(express.json());
 app.use(cors());
 
-Initialize Firebase Admin
+// Initialize Firebase Admin
 try {
   admin.initializeApp({
     credential: admin.credential.cert({

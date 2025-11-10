@@ -1,16 +1,17 @@
-const AWS = require('aws-sdk');
+const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const multer = require('multer');
 const sharp = require('sharp');
 const path = require('path');
 
-AWS.config.update({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: process.env.AWS_REGION || 'ap-south-1'
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION || 'ap-south-1',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+  }
 });
 
-const s3 = new AWS.S3();
-const BUCKET_NAME = 'company-video-storage-prod';
+const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME || 'company-video-storage-prod';
 
 const uploadToS3 = async (fileBuffer, folder, fileName) => {
   try {
@@ -36,13 +37,14 @@ const uploadToS3 = async (fileBuffer, folder, fileName) => {
       ACL: 'public-read'
     };
 
-    const result = await s3.upload(params).promise();
-    
-    if (!result || !result.Location) {
-      throw new Error('Failed to upload file to S3');
-    }
+    const command = new PutObjectCommand(params);
+    await s3Client.send(command);
 
-    return result.Location;
+    // Construct the S3 URL
+    const region = process.env.AWS_REGION || 'ap-south-1';
+    const s3Url = `https://${BUCKET_NAME}.s3.${region}.amazonaws.com/${key}`;
+
+    return s3Url;
   } catch (error) {
     console.error('Error in uploadToS3:', error);
     throw new Error(`S3 Upload Error: ${error.message}`);
@@ -71,7 +73,8 @@ const deleteImageFromS3 = async (imageUrl) => {
       Key: key
     };
 
-    await s3.deleteObject(params).promise();
+    const command = new DeleteObjectCommand(params);
+    await s3Client.send(command);
     
     return true;
   } catch (error) {
