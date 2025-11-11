@@ -120,6 +120,19 @@ jobs:
             echo "🌐 Your API is live at: http://$PUBLIC_IP:5000"
             echo "-------------------------------------"
           EOF
+      - name: Deploy application to EC2
+        run: |
+          echo "Deployment completed successfully!"
+          echo "-----------------------------------"
+          echo "Your API is live at: http://${EC2_HOST}:5000"
+      
+      - name: Add summary with clickable link
+        run: |
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**✅ Backend deployed successfully to EC2!**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "[🌐 View Live API](http://${EC2_HOST}:5000)" >> $GITHUB_STEP_SUMMARY
 
 
     # # ✅ Send Email on Success
