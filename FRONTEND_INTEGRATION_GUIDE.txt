@@ -1,0 +1,491 @@
+# Frontend Integration Guide
+
+## 1. API Configuration
+
+```javascript
+const API_BASE_URL = 'http://localhost:5000/api';
+
+// Add this to your axios configuration
+axios.defaults.baseURL = API_BASE_URL;
+```
+
+## 2. Products API Integration
+
+### Get All Products
+```javascript
+// Response Format:
+{
+  "success": true,
+  "data": [
+    {
+      "_id": "690f0b01a3a5a835649d934b",
+      "name": "Test Product",
+      "description": {
+        "short": "Test product description",
+        "long": "Detailed description here"
+      },
+      "price": 999,
+      "images": [
+        {
+          "url": "https://example.com/image.jpg",
+          "alt": "Product Image"
+        }
+      ],
+      "category": {
+        "main": "Electronics",
+        "sub": "Mobile"
+      }
+    }
+  ]
+}
+
+// Example Usage:
+async function getProducts() {
+  try {
+    const response = await axios.get('/products');
+    return response.data.data;
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    throw error;
+  }
+}
+```
+
+## 3. Cart API Integration
+
+### 1. View Cart
+```javascript
+// GET /api/cart
+// Response Format:
+{
+  "success": true,
+  "data": [
+    {
+      "productId": {
+        "_id": "690f0b01a3a5a835649d934b",
+        "name": "Test Product",
+        "price": 999,
+        // ... other product details
+      },
+      "quantity": 1
+    }
+  ]
+}
+
+// Example Usage:
+async function getCart() {
+  try {
+    const response = await axios.get('/cart');
+    return response.data.data;
+  } catch (error) {
+    console.error('Error fetching cart:', error);
+    throw error;
+  }
+}
+```
+
+### 2. Add to Cart
+```javascript
+// POST /api/cart/add/:productId
+// Request Body:
+{
+  "quantity": 1
+}
+
+// Response Format:
+{
+  "success": true,
+  "message": "Product added to cart",
+  "data": {
+    "userId": "test-user-123",
+    "products": [
+      {
+        "productId": "690f0b01a3a5a835649d934b",
+        "quantity": 1
+      }
+    ]
+  }
+}
+
+// Example Usage:
+async function addToCart(productId, quantity = 1) {
+  try {
+    const response = await axios.post(`/cart/add/${productId}`, { quantity });
+    return response.data;
+  } catch (error) {
+    console.error('Error adding to cart:', error);
+    throw error;
+  }
+}
+```
+
+### 3. Remove from Cart
+```javascript
+// DELETE /api/cart/remove/:productId
+// Response Format:
+{
+  "success": true,
+  "message": "Product removed from cart",
+  "data": {
+    "userId": "test-user-123",
+    "products": []
+  }
+}
+
+// Example Usage:
+async function removeFromCart(productId) {
+  try {
+    const response = await axios.delete(`/cart/remove/${productId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error removing from cart:', error);
+    throw error;
+  }
+}
+```
+
+## 4. Wishlist API Integration
+
+### 1. View Wishlist
+```javascript
+// GET /api/wishlist
+// Response Format:
+{
+  "success": true,
+  "data": [
+    {
+      "_id": "690f0b01a3a5a835649d934b",
+      "name": "Test Product",
+      "price": 999,
+      // ... other product details
+    }
+  ]
+}
+
+// Example Usage:
+async function getWishlist() {
+  try {
+    const response = await axios.get('/wishlist');
+    return response.data.data;
+  } catch (error) {
+    console.error('Error fetching wishlist:', error);
+    throw error;
+  }
+}
+```
+
+### 2. Add to Wishlist
+```javascript
+// POST /api/wishlist/add/:productId
+// Response Format:
+{
+  "success": true,
+  "message": "Product added to wishlist",
+  "data": {
+    "userId": "test-user-123",
+    "products": ["690f0b01a3a5a835649d934b"]
+  }
+}
+
+// Example Usage:
+async function addToWishlist(productId) {
+  try {
+    const response = await axios.post(`/wishlist/add/${productId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error adding to wishlist:', error);
+    throw error;
+  }
+}
+```
+
+### 3. Remove from Wishlist
+```javascript
+// DELETE /api/wishlist/remove/:productId
+// Response Format:
+{
+  "success": true,
+  "message": "Product removed from wishlist",
+  "data": {
+    "userId": "test-user-123",
+    "products": []
+  }
+}
+
+// Example Usage:
+async function removeFromWishlist(productId) {
+  try {
+    const response = await axios.delete(`/wishlist/remove/${productId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error removing from wishlist:', error);
+    throw error;
+  }
+}
+```
+
+## 5. React Component Integration Example
+
+```javascript
+// Custom hook for cart/wishlist management
+function useShop() {
+  const [cart, setCart] = useState([]);
+  const [wishlist, setWishlist] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Load cart and wishlist
+  useEffect(() => {
+    loadCart();
+    loadWishlist();
+  }, []);
+
+  async function loadCart() {
+    try {
+      setLoading(true);
+      const cartData = await getCart();
+      setCart(cartData);
+    } catch (err) {
+      setError('Failed to load cart');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadWishlist() {
+    try {
+      setLoading(true);
+      const wishlistData = await getWishlist();
+      setWishlist(wishlistData);
+    } catch (err) {
+      setError('Failed to load wishlist');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return {
+    cart,
+    wishlist,
+    loading,
+    error,
+    addToCart,
+    removeFromCart,
+    addToWishlist,
+    removeFromWishlist
+  };
+}
+
+// Usage in component:
+function ProductList() {
+  const {
+    cart,
+    wishlist,
+    loading,
+    error,
+    addToCart,
+    removeFromCart,
+    addToWishlist,
+    removeFromWishlist
+  } = useShop();
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
+
+  return (
+    <div>
+      {/* Your product list rendering */}
+    </div>
+  );
+}
+```
+
+## 6. Error Handling
+
+All API responses follow this format:
+```javascript
+// Success Response:
+{
+  "success": true,
+  "data": [ ... ],
+  "message": "Optional success message"
+}
+
+// Error Response:
+{
+  "success": false,
+  "message": "Error description here"
+}
+```
+
+Common HTTP Status Codes:
+- 200: Success
+- 400: Bad Request
+- 401: Unauthorized
+- 404: Not Found
+- 500: Server Error
+
+## 7. Implementation Tips
+
+1. Always check the "success" field in responses
+2. Implement loading states for better UX
+3. Handle errors gracefully with user feedback
+4. Use a state management solution (Redux, Context) for cart/wishlist
+5. Implement optimistic updates for better UX
+
+## 8. Testing
+
+### Test Workflow with Real Examples
+
+#### 1. Create Test Product
+```javascript
+// Run create-test-product.js
+// Output:
+Connected to MongoDB
+Test product created with ID: "690f0b01a3a5a835649d934b"
+// Use this ID for testing cart/wishlist operations
+```
+
+#### 2. Test Cart Operations
+
+a. View Empty Cart:
+```javascript
+// GET http://localhost:5000/api/cart
+// Response:
+{
+  "success": true,
+  "data": []
+}
+```
+
+b. Add to Cart:
+```javascript
+// POST http://localhost:5000/api/cart/add/690f0b01a3a5a835649d934b
+// Request Body:
+{
+  "quantity": 1
+}
+// Response:
+{
+  "success": true,
+  "message": "Product added to cart",
+  "data": {
+    "userId": "test-user-123",
+    "products": [{
+      "productId": "690f0b01a3a5a835649d934b",
+      "quantity": 1
+    }],
+    "_id": "690f0ba9e9f254176e3d25d8",
+    "createdAt": "2025-11-08T09:21:45.968Z"
+  }
+}
+```
+
+c. View Cart with Items:
+```javascript
+// GET http://localhost:5000/api/cart
+// Response:
+{
+  "success": true,
+  "data": [{
+    "productId": {
+      "description": {
+        "short": "Test product for cart/wishlist",
+        "long": "This is a test product for cart/wishlist testing",
+        "features": []
+      },
+      "category": {
+        "main": "test",
+        "sub": "testing"
+      }
+    }
+  }]
+}
+```
+
+d. Remove from Cart:
+```javascript
+// DELETE http://localhost:5000/api/cart/remove/690f0b01a3a5a835649d934b
+// Response:
+{
+  "success": true,
+  "message": "Product removed from cart",
+  "data": {
+    "_id": "690f0ba9e9f254176e3d25d8",
+    "userId": "test-user-123",
+    "products": [],
+    "createdAt": "2025-11-08T09:21:45.968Z",
+    "updatedAt": "2025-11-08T09:22:45.123Z"
+  }
+}
+```
+
+#### 3. Test Wishlist Operations
+
+a. Add to Wishlist:
+```javascript
+// POST http://localhost:5000/api/wishlist/add/690f0b01a3a5a835649d934b
+// Response:
+{
+  "success": true,
+  "message": "Product added to wishlist",
+  "data": {
+    "userId": "test-user-123",
+    "products": ["690f0b01a3a5a835649d934b"],
+    "_id": "690f0bbce9f254176e3d25e0",
+    "createdAt": "2025-11-08T09:22:04.886Z"
+  }
+}
+```
+
+b. View Wishlist:
+```javascript
+// GET http://localhost:5000/api/wishlist
+// Response:
+{
+  "success": true,
+  "data": [{
+    "description": {
+      "short": "Test product for cart/wishlist",
+      "long": "This is a test product for cart/wishlist testing",
+      "features": []
+    },
+    "category": {
+      "main": "test",
+      "sub": "testing"
+    }
+  }]
+}
+```
+
+c. Remove from Wishlist:
+```javascript
+// DELETE http://localhost:5000/api/wishlist/remove/690f0b01a3a5a835649d934b
+// Response:
+{
+  "success": true,
+  "message": "Product removed from wishlist",
+  "data": {
+    "_id": "690f0bbce9f254176e3d25e0",
+    "userId": "test-user-123",
+    "products": [],
+    "createdAt": "2025-11-08T09:22:04.886Z",
+    "updatedAt": "2025-11-08T09:23:16.123Z"
+  }
+}
+```
+
+#### 4. Common Test Scenarios
+1. Test error scenarios (network errors, invalid data)
+2. Test loading states and error handling
+3. Test with empty/full cart and wishlist
+4. Test concurrent operations
+5. Verify proper error handling for invalid product IDs
+
+## 9. Security Considerations
+
+1. Use HTTPS in production
+2. Implement proper authentication
+3. Validate all user inputs
+4. Handle sensitive data properly
+5. Implement rate limiting

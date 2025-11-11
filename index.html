@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Razorpay Payment Integration</title>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .payment-container {
+      border: 1px solid #ddd;
+      padding: 20px;
+      border-radius: 5px;
+    }
+    button {
+      background-color: #3399cc;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    #payment-status {
+      margin-top: 20px;
+      padding: 10px;
+      border-radius: 5px;
+      display: none;
+    }
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Razorpay Payment Integration</h1>
+  
+  <div class="payment-container">
+    <h2>Product Order</h2>
+    <p>Complete your payment to process the order</p>
+    <button id="rzp-button">Pay Now</button>
+  </div>
+
+  <div id="payment-status"></div>
+
+  <script>
+    document.getElementById("rzp-button").onclick = async function(e) {
+      e.preventDefault();
+      
+      const statusDiv = document.getElementById("payment-status");
+      statusDiv.className = "";
+      statusDiv.style.display = "none";
+      
+      // Show loading state
+      this.disabled = true;
+      this.textContent = "Processing...";
+      
+      // Prepare order data
+      const orderData = {
+        userId: "681b8c313c033cf7c431c8ed",
+        productId: "681b80d312ea2684ab007def",
+        paymentOption: "daily",
+        paymentDetails: {
+          dailyAmount: 1
+        },
+        deliveryAddress: {
+          name: "office",
+          addressLine1: "123 Main Street",
+          addressLine2: "Apartment 4B",
+          city: "Mumbai",
+          state: "Maharashtra",
+          pincode: "400001",
+          country: "India",
+          phoneNumber: "9876543210",
+          isDefault: true,
+          addressType: "home",
+          landmark: "Near City Park"
+        }
+      };
+
+      try {
+        // Create order on the backend
+        const response = await fetch('http://localhost:5000/api/orders', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            // Include auth token if required
+            // 'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify(orderData),
+          credentials: 'include' // Include cookies if using session-based auth
+        });
+
+        if (!response.ok) {
+          throw new Error(`Server responded with status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("Order created:", data);
+
+        if (!data.payment || !data.payment.order_id) {
+          throw new Error("Payment information missing from server response");
+        }
+
+        // Configure Razorpay options
+        const options = {
+          key: data.payment.key_id, // Use the key from the server response
+          amount: data.payment.amount,
+          currency: data.payment.currency,
+          name: "Your Company",
+          description: `Daily payment for order ${data.order._id}`,
+          order_id: data.payment.order_id,
+          prefill: {
+            name: orderData.deliveryAddress.name,
+            contact: orderData.deliveryAddress.phoneNumber,
+            email: "customer@example.com" // You should get this from user data
+          },
+          notes: {
+            transaction_id: data.payment.transaction_id,
+            order_id: data.order._id
+          },
+          theme: {
+            color: "#3399cc"
+          },
+          modal: {
+            ondismiss: function() {
+              // Re-enable button when modal is closed without payment
+              document.getElementById("rzp-button").disabled = false;
+              document.getElementById("rzp-button").textContent = "Pay Now";
+              
+              showStatus("Payment cancelled", "error");
+            }
+          },
+          handler: function(response) {
+            // This function is called when payment is successful
+            verifyPayment(response, data.payment.transaction_id);
+          }
+        };
+
+        // Initialize Razorpay
+        const rzp = new Razorpay(options);
+        
+        // Handle payment errors
+        rzp.on('payment.failed', function(response) {
+          console.error("Payment failed:", response.error);
+          document.getElementById("rzp-button").disabled = false;
+          document.getElementById("rzp-button").textContent = "Try Again";
+          
+          showStatus(`Payment failed: ${response.error.description}`, "error");
+        });
+        
+        // Open Razorpay checkout
+        rzp.open();
+        
+      } catch (error) {
+        console.error("Error:", error);
+        document.getElementById("rzp-button").disabled = false;
+        document.getElementById("rzp-button").textContent = "Pay Now";
+        
+        showStatus(`Error: ${error.message}`, "error");
+      }
+    };
+
+    // Function to verify payment with the server
+    async function verifyPayment(paymentResponse, transactionId) {
+      try {
+        // Send payment verification request to server
+        const verifyResponse = await fetch('http://localhost:5000/api/payments/verify', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            // Include auth token if required
+            // 'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({
+            razorpay_payment_id: paymentResponse.razorpay_payment_id,
+            razorpay_order_id: paymentResponse.razorpay_order_id,
+            razorpay_signature: paymentResponse.razorpay_signature,
+            transaction_id: transactionId
+          }),
+          credentials: 'include' // Include cookies if using session-based auth
+        });
+
+        const result = await verifyResponse.json();
+        
+        if (verifyResponse.ok && result.success) {
+          showStatus("Payment successful! Your order has been processed.", "success");
+          // Redirect to order confirmation page or show success message
+          // window.location.href = `/order-confirmation/${result.orderId}`;
+        } else {
+          throw new Error(result.message || "Payment verification failed");
+        }
+      } catch (error) {
+        console.error("Verification error:", error);
+        showStatus(`Payment verification failed: ${error.message}`, "error");
+      } finally {
+        document.getElementById("rzp-button").disabled = false;
+        document.getElementById("rzp-button").textContent = "Pay Now";
+      }
+    }
+
+    // Helper function to show status messages
+    function showStatus(message, type) {
+      const statusDiv = document.getElementById("payment-status");
+      statusDiv.textContent = message;
+      statusDiv.className = type;
+      statusDiv.style.display = "block";
+    }
+  </script>
+
+</body>
+</html>
