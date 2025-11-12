@@ -21,7 +21,23 @@ jobs:
 
     steps:
       #  Step 1: Checkout the repo
-      - na
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2: Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies (auto-fallback)
+        run: |
+          echo "📦 Installing dependencies..."
+          npm ci || {
+            echo "⚠️ npm ci failed — falling back to npm install..."
+            npm install
+          }
+
 
       # # ✅ Step 4: Linting check (ESLint)
       # - name: Run ESLint
@@ -120,21 +136,20 @@ jobs:
             echo "-------------------------------------"
           EOF
 
-      - name: Deploy application to EC2
-        run: |
-          echo "Deployment completed successfully!"
-          echo "-----------------------------------"
-          echo "Your API is live at: http://${EC2_HOST}:5000"
       
-      - name: Add summary with clickable link
+      - name: 🧾 Add summary with clickable link
+        if: success()
         run: |
-          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Backend deployed successfully to EC2!" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "🔗 **API Endpoint:** http://13.203.227.43:5000" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "🌐 [Click here to open the API](http://13.203.227.43:5000)" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## 🚀 Deployment Summary"
+            echo
+            echo "✅ Backend deployed successfully to EC2!"
+            echo
+            echo "🔗 **API Endpoint:** [http://13.203.227.43:5000](http://13.203.227.43:5000)"
+            echo
+            echo "---"
+            echo "🌐 **Direct Link:** [Click here to open the API](http://13.203.227.43:5000)"
+          } >> $GITHUB_STEP_SUMMARY
 
 
     # # ✅ Send Email on Success
