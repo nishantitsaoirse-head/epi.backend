@@ -2,7 +2,7 @@ const User = require('../models/User');
 const Referral = require('../models/Referral');
 const DailyCommission = require('../models/DailyCommission');
 const CommissionWithdrawal = require('../models/CommissionWithdrawal');
-const Order = require('../models/Order'); // ✅ Added for new referral screens
+const Order = require('../models/Order');
 const { generateReferralCode } = require('../utils/referralUtils');
 
 // Generate and assign referral code to new user
@@ -265,32 +265,20 @@ exports.getMissedPaymentDays = async (referralId) => {
   }
 };
 
-// Referral List
+// Referral List (updated to use purchase tracking)
 exports.getReferralList = async (referrerId) => {
   try {
     const referrals = await Referral.find({ referrer: referrerId })
       .populate('referredUser', 'name email profilePicture');
 
-    const referralList = await Promise.all(
-      referrals.map(async (ref) => {
-        const orders = await Order.find({ user: ref.referredUser._id, orderStatus: 'confirmed' });
-        const totalItems = orders.length;
-        const totalCommission = ref.commissionEarned || 0;
-
-        return {
-          _id: ref._id,
-          referredUser: {
-            _id: ref.referredUser._id,
-            name: ref.referredUser.name,
-            email: ref.referredUser.email,
-            profilePicture: ref.referredUser.profilePicture || null,
-          },
-          totalItems,
-          commission: totalCommission,
-          status: ref.status
-        };
-      })
-    );
+    const referralList = referrals.map((ref) => ({
+      _id: ref._id,
+      referredUser: ref.referredUser,
+      totalItems: ref.totalPurchases || 0,
+      totalPurchaseValue: ref.totalPurchaseValue || 0,
+      commission: ref.commissionEarned || 0,
+      status: ref.status
+    }));
 
     return { success: true, referrals: referralList };
   } catch (error) {
@@ -304,20 +292,17 @@ exports.getReferredUserDetails = async (referredUserId) => {
     const referredUser = await User.findById(referredUserId).select('name email profilePicture');
     if (!referredUser) throw new Error('Referred user not found');
 
-    const orders = await Order.find({ user: referredUserId }).populate('product', 'name price');
-    const referrals = await Referral.find({ referredUser: referredUserId });
+    const referral = await Referral.findOne({ referredUser: referredUserId });
+    const orders = referral?.purchases || [];
 
-    const totalProducts = orders.length;
-    const totalCommission = referrals.reduce((sum, r) => sum + (r.commissionEarned || 0), 0);
+    const totalProducts = referral?.totalPurchases || 0;
+    const totalCommission = referral?.commissionEarned || 0;
 
-    const products = orders.map((order) => ({
-      productId: order._id,
-      productName: order.product?.name || 'N/A',
-      dateOfPurchase: order.paymentDetails?.startDate,
-      amount: order.orderAmount,
-      paymentOption: order.paymentOption,
-      status: order.orderStatus,
-      pendingStatus: order.paymentStatus === 'pending' ? 'Pending' : 'Completed'
+    const products = orders.map((p) => ({
+      productId: p.product,
+      orderId: p.order,
+      dateOfPurchase: p.date,
+      amount: p.amount
     }));
 
     return {
@@ -340,37 +325,26 @@ exports.getReferredUserDetails = async (referredUserId) => {
 // Referral Product Details
 exports.getReferralProductDetails = async (referredUserId, productId) => {
   try {
-    const order = await Order.findOne({ _id: productId, user: referredUserId }).populate('product', 'name');
-    if (!order) throw new Error('Order not found');
+    const referral = await Referral.findOne({ referredUser: referredUserId }).populate('purchases.product', 'name');
+    if (!referral) throw new Error('Referral not found');
 
-    const referral = await Referral.findOne({ referredUser: referredUserId });
-    const dailyAmount = order.paymentDetails?.dailyAmount || 0;
-    const commissionPerDay = (dailyAmount * (referral?.commissionPercentage || 30)) / 100;
+    const purchase = referral.purchases.find(p => p.product.toString() === productId);
+    if (!purchase) throw new Error('Product not found in referral history');
 
-    const startDate = order.paymentDetails?.startDate;
-    const endDate = order.paymentDetails?.endDate;
-    const now = new Date();
-    const totalDays = order.paymentDetails?.totalDuration || 30;
-    const daysPassed = Math.min(Math.floor((now - startDate) / (1000 * 60 * 60 * 24)), totalDays);
-    const daysPending = Math.max(totalDays - daysPassed, 0);
-    const totalCommission = commissionPerDay * totalDays;
-    const earnedCommission = commissionPerDay * daysPassed;
+    const commissionPerDay = (referral.dailyAmount * (referral.commissionPercentage || 30)) / 100;
+    const totalCommission = commissionPerDay * referral.days;
+    const earnedCommission = referral.commissionEarned || 0;
 
     return {
       success: true,
       productDetails: {
-        productName: order.product?.name,
-        productId: order._id,
-        dateOfPurchase: startDate,
-        totalPrice: order.orderAmount,
-        dailySIP: dailyAmount,
+        productName: purchase.product.name,
+        productId,
+        totalPrice: purchase.amount,
         commissionPerDay,
         totalEarnings: earnedCommission,
         totalExpectedEarnings: totalCommission,
-        pendingDays: daysPending,
-        paymentOption: order.paymentOption,
-        pendingStartDate: now,
-        pendingEndDate: endDate
+        purchaseDate: purchase.date
       }
     };
   } catch (error) {
