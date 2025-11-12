@@ -9,6 +9,7 @@ permissions:
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  # Uncomment if you want it to run on direct pushes as well
   # push:
   #   branches:
   #     - main
@@ -43,14 +44,40 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: 🔍 Scan for conflict markers
+        id: scan
         uses: olivernybroe/action-conflict-finder@v4.0
+        continue-on-error: true
+
+      # 🟥 Label PR if conflict markers found
+      - name: 🚫 Label PR with conflict markers
+        if: steps.scan.outcome == 'failure'
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          labels: "🚫 conflict markers"
+
+      # 🟩 Label PR as verified clean
+      - name: ✅ Label PR as verified clean
+        if: steps.scan.outcome == 'success'
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          labels: "✅ verified clean"
+
+      # 🧹 Remove old conflict labels once resolved
+      - name: 🧹 Remove conflict-related labels
+        if: steps.scan.outcome == 'success'
+        uses: actions-ecosystem/action-remove-labels@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          labels: "⚠️ merge conflict, 🚫 conflict markers"
 
       - name: ✅ Report success
         if: success()
         run: echo "No merge conflict markers found in code."
 
       - name: ❌ Fail if conflicts found
-        if: failure()
+        if: steps.scan.outcome == 'failure'
         run: |
           echo "Merge conflict markers found in code!"
           exit 1
