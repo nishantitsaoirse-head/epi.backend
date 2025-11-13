@@ -66,6 +66,15 @@ app.get('/', (req, res) => {
   res.send('Epi Project API is running');
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+const HOST = '0.0.0.0';  // Add this line
+
+app.listen(PORT, HOST, () => {
+  console.log(`Server is running on ${HOST}:${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`Access at: http://${HOST}:${PORT}`);
 });
+
+// app.listen(PORT, () => {
+//   console.log(`Server is running on port ${PORT}`);
+// });
+
