@@ -16,6 +16,9 @@ const adminRoutes = require('./routes/admin');
 const referralRoutes = require('./routes/referralRoutes');
 const planRoutes = require('./routes/plans');
 const imageStoreRoutes = require('./routes/imageStore');
+const bannerRoutes = require('./routes/bannerRoutes');
+const successStoryRoutes = require('./routes/successStoryRoutes');
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -59,6 +62,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/referrals', referralRoutes);
 app.use('/api/plans', planRoutes);
 app.use('/api/images', imageStoreRoutes);
+app.use('/api/banners', bannerRoutes);
+app.use('/api/success-stories', successStoryRoutes);
 
 
 
