@@ -21,6 +21,7 @@ jobs:
       EC2_USER: ${{ secrets.EC2_USER }}
       PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
       NODE_ENV: production
+      DEPLOY_KEY: ${{ secrets.EC2_GITHUB_DEPLOY_KEY }}
 
     steps:
       #  Step 1: Checkout the repo
@@ -88,9 +89,14 @@ jobs:
           sudo rm -rf /tmp/* || true
           sudo journalctl --vacuum-time=3d || true
           echo "✅ Cleanup completed"
+
       
           echo "🔐 Setting up SSH config for GitHub..."
           mkdir -p ~/.ssh
+
+          echo "${DEPLOY_KEY}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          
           cat << 'SSH_CONFIG_EOF' > ~/.ssh/config
           Host github.com
               HostName github.com
@@ -104,6 +110,7 @@ jobs:
             # Pull latest repo version
             if [ -d .git ]; then
               echo "🔄 Repo found — pulling latest changes..."
+              git remote set-url origin git@github.com:nabeelanasaritsaoirse/epi.backend.git
               git fetch origin main
               git reset --hard origin/main
             else
