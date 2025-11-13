@@ -1,0 +1,494 @@
+{
+  "info": {
+    "name": "Image Store API Tests",
+    "_postman_id": "image-store-api-tests",
+    "description": "Complete API testing collection for Image Store endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://13.203.227.43:5000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "YOUR_ACCESS_TOKEN_HERE",
+      "type": "string"
+    },
+    {
+      "key": "image_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Get Image Types (No Auth)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/images/types",
+          "host": ["{{base_url}}"],
+          "path": ["api", "images", "types"]
+        },
+        "description": "Get available image types and platforms. No authentication required."
+      },
+      "response": []
+    },
+    {
+      "name": "2. Upload Image (Admin)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "image",
+              "type": "file",
+              "src": [],
+              "description": "Select an image file (jpg, png, webp, gif, svg)"
+            },
+            {
+              "key": "title",
+              "value": "Summer Sale Banner",
+              "type": "text"
+            },
+            {
+              "key": "type",
+              "value": "banner",
+              "type": "text",
+              "description": "Options: banner, ad, promotion, carousel, thumbnail, icon"
+            },
+            {
+              "key": "platform",
+              "value": "both",
+              "type": "text",
+              "description": "Options: web, app, both"
+            },
+            {
+              "key": "orderBy",
+              "value": "1",
+              "type": "text",
+              "description": "Display order (optional)"
+            },
+            {
+              "key": "isActive",
+              "value": "true",
+              "type": "text",
+              "description": "Active status (optional)"
+            },
+            {
+              "key": "altText",
+              "value": "Summer sale promotional banner",
+              "type": "text",
+              "description": "Alt text for accessibility (optional)"
+            },
+            {
+              "key": "description",
+              "value": "50% off on all products",
+              "type": "text",
+              "description": "Description (optional)"
+            },
+            {
+              "key": "linkUrl",
+              "value": "https://example.com/sale",
+              "type": "text",
+              "description": "Link URL if clickable (optional)"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/api/images",
+          "host": ["{{base_url}}"],
+          "path": ["api", "images"]
+        },
+        "description": "Upload a new image to the store. Admin authentication required."
+      },
+      "response": []
+    },
+    {
+      "name": "3. Get All Images (Admin)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/images/admin/all?page=1&limit=10",
+          "host": ["{{base_url}}"],
+          "path": ["api", "images", "admin", "all"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            },
+            {
+              "key": "type",
+              "value": "banner",
+              "disabled": true
+            },
+            {
+              "key": "platform",
+              "value": "web",
+              "disabled": true
+            },
+            {
+              "key": "isActive",
+              "value": "true",
+              "disabled": true
+            },
+            {
+              "key": "search",
+              "value": "sale",
+              "disabled": true
+            }
+          ]
+        },
+        "description": "Get all images with pagination and filters. Admin only."
+      },
+      "response": []
+    },
+    {
+      "name": "4. Get Active Images (Admin)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/images/admin/active?page=1&limit=10",
+          "host": ["{{base_url}}"],
+          "path": ["api", "images", "admin", "active"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            }
+          ]
+        },
+        "description": "Get only active images. Admin only."
+      },
+      "response": []
+    },
+    {
+      "name": "5. Get Image Stats (Admin)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/images/stats",
+          "host": ["{{base_url}}"],
+          "path": ["api", "images", "stats"]
+        },
+        "description": "Get image statistics including counts by type, platform, etc. Admin only."
+      },
+      "response": []
+    },
+    {
+      "name": "6. Get Image by ID (Public)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/images/{{image_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "images", "{{image_id}}"]
+        },
+        "description": "Get single image by ID. No authentication required."
+      },
+      "response": []
+    },
+    {
+      "name": "7. Get Images by Type (Public)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/images/type/banner?platform=web",
+          "host": ["{{base_url}}"],
+          "path": ["api", "images", "type", "banner"],
+          "query": [
+            {
+              "key": "platform",
+              "value": "web"
+            }
+          ]
+        },
+        "description": "Get all images of a specific type. No authentication required."
+      },
+      "response": []
+    },
+    {
+      "name": "8. Update Image Metadata (Admin)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Updated Banner Title\",\n  \"type\": \"banner\",\n  \"platform\": \"both\",\n  \"orderBy\": 2,\n  \"isActive\": true,\n  \"altText\": \"Updated alt text\",\n  \"description\": \"Updated description\",\n  \"linkUrl\": \"https://example.com/new-link\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/images/{{image_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "images", "{{image_id}}"]
+        },
+        "description": "Update image metadata (not the image file itself). Admin only."
+      },
+      "response": []
+    },
+    {
+      "name": "9. Replace Image File (Admin)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "image",
+              "type": "file",
+              "src": [],
+              "description": "Select new image file to replace the existing one"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/api/images/{{image_id}}/replace",
+          "host": ["{{base_url}}"],
+          "path": ["api", "images", "{{image_id}}", "replace"]
+        },
+        "description": "Replace the image file while keeping the same metadata. Admin only."
+      },
+      "response": []
+    },
+    {
+      "name": "10. Toggle Image Status (Admin)",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/images/{{image_id}}/toggle-status",
+          "host": ["{{base_url}}"],
+          "path": ["api", "images", "{{image_id}}", "toggle-status"]
+        },
+        "description": "Toggle image active/inactive status. Admin only."
+      },
+      "response": []
+    },
+    {
+      "name": "11. Update Image Order (Admin)",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"orders\": [\n    { \"id\": \"IMAGE_ID_1\", \"orderBy\": 1 },\n    { \"id\": \"IMAGE_ID_2\", \"orderBy\": 2 },\n    { \"id\": \"IMAGE_ID_3\", \"orderBy\": 3 }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/images/order",
+          "host": ["{{base_url}}"],
+          "path": ["api", "images", "order"]
+        },
+        "description": "Update display order of multiple images. Admin only."
+      },
+      "response": []
+    },
+    {
+      "name": "12. Bulk Update Status (Admin)",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"ids\": [\"IMAGE_ID_1\", \"IMAGE_ID_2\"],\n  \"isActive\": false\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/images/bulk/status",
+          "host": ["{{base_url}}"],
+          "path": ["api", "images", "bulk", "status"]
+        },
+        "description": "Update status of multiple images at once. Admin only."
+      },
+      "response": []
+    },
+    {
+      "name": "13. Soft Delete Image (Admin)",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/images/{{image_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "images", "{{image_id}}"]
+        },
+        "description": "Soft delete an image (can be restored). Admin only."
+      },
+      "response": []
+    },
+    {
+      "name": "14. Permanent Delete Image (Admin)",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/images/{{image_id}}/permanent",
+          "host": ["{{base_url}}"],
+          "path": ["api", "images", "{{image_id}}", "permanent"]
+        },
+        "description": "Permanently delete image from database and S3. Cannot be restored. Admin only."
+      },
+      "response": []
+    },
+    {
+      "name": "15. Restore Deleted Image (Admin)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/images/{{image_id}}/restore",
+          "host": ["{{base_url}}"],
+          "path": ["api", "images", "{{image_id}}", "restore"]
+        },
+        "description": "Restore a soft-deleted image. Admin only."
+      },
+      "response": []
+    },
+    {
+      "name": "16. Increment Click Count (Public)",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/images/{{image_id}}/click",
+          "host": ["{{base_url}}"],
+          "path": ["api", "images", "{{image_id}}", "click"]
+        },
+        "description": "Increment click count for analytics. No authentication required."
+      },
+      "response": []
+    },
+    {
+      "name": "17. Bulk Delete Images (Admin)",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"ids\": [\"IMAGE_ID_1\", \"IMAGE_ID_2\", \"IMAGE_ID_3\"]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/images/bulk/delete",
+          "host": ["{{base_url}}"],
+          "path": ["api", "images", "bulk", "delete"]
+        },
+        "description": "Soft delete multiple images at once. Admin only."
+      },
+      "response": []
+    }
+  ]
+}

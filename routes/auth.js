@@ -590,25 +590,29 @@ router.post("/login", async (req, res) => {
     const { idToken } = req.body;
 
     if (!idToken) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
         message: "ID token is required",
         code: "NO_ID_TOKEN"
       });
     }
 
+    console.log('Starting login process for token...');
     const decodedToken = await admin.auth().verifyIdToken(idToken);
     const uid = decodedToken.uid;
+    console.log('Firebase token verified successfully. UID:', uid);
 
     let user = await User.findOne({ firebaseUid: uid });
+    console.log('User found in database:', user ? 'Yes' : 'No');
 
     if (!user) {
+      console.log('Creating new user...');
       const userData = {
         firebaseUid: uid,
         name: decodedToken.name || decodedToken.phone_number || decodedToken.email?.split('@')[0] || 'User',
         profilePicture: decodedToken.picture || '',
       };
-      
+
       if (decodedToken.email) {
         userData.email = decodedToken.email;
       } else if (decodedToken.phone_number) {
@@ -617,20 +621,45 @@ router.post("/login", async (req, res) => {
       } else {
         userData.email = `${uid}@temp.user`;
       }
-      
-      user = new User(userData);
-      await user.save();
+
+      console.log('User data prepared:', JSON.stringify(userData, null, 2));
+
+      try {
+        user = new User(userData);
+        await user.save();
+        console.log('User created successfully. User ID:', user._id);
+      } catch (saveError) {
+        console.error('Error saving user to database:', saveError);
+
+        // Handle duplicate key error (race condition)
+        if (saveError.code === 11000) {
+          console.log('Duplicate key error. Attempting to find existing user...');
+          user = await User.findOne({ firebaseUid: uid });
+          if (user) {
+            console.log('Found existing user after duplicate error. User ID:', user._id);
+          } else {
+            console.error('Could not find user even after duplicate key error');
+            throw saveError;
+          }
+        } else {
+          // Re-throw other errors
+          throw saveError;
+        }
+      }
     }
 
     if (!user) {
-      return res.status(404).json({ 
+      console.error('User is null after all attempts');
+      return res.status(404).json({
         success: false,
         message: "User not found",
         code: "USER_NOT_FOUND"
       });
     }
 
+    console.log('Generating JWT tokens for user:', user._id);
     const tokens = generateTokens(user._id.toString(), user.role);
+    console.log('Tokens generated successfully');
 
     return res.status(200).json({
       success: true,
@@ -650,26 +679,35 @@ router.post("/login", async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Login error details:', {
+      message: error.message,
+      code: error.code,
+      name: error.name,
+      stack: error.stack
+    });
+
     if (error.code === 'auth/id-token-expired') {
-      return res.status(401).json({ 
+      return res.status(401).json({
         success: false,
         message: 'Firebase token expired. Please login again',
         code: 'FIREBASE_TOKEN_EXPIRED'
       });
     }
-    
+
     if (error.code === 'auth/argument-error') {
-      return res.status(401).json({ 
+      return res.status(401).json({
         success: false,
         message: 'Invalid token format',
         code: 'INVALID_TOKEN_FORMAT'
       });
     }
-    
-    return res.status(500).json({ 
+
+    return res.status(500).json({
       success: false,
       message: "Authentication failed",
-      error: error.message 
+      error: error.message,
+      errorCode: error.code,
+      errorName: error.name
     });
   }
 });
@@ -947,14 +985,15 @@ router.get("/profile/:userId", verifyToken, async (req, res) => {
 
 router.put("/profile", verifyToken, async (req, res) => {
   try {
-    const { name, phoneNumber } = req.body;
+    const { name, phoneNumber, deviceToken } = req.body;
     const updates = {};
 
     if (name) updates.name = name;
     if (phoneNumber) updates.phoneNumber = phoneNumber;
+    if (deviceToken) updates.deviceToken = deviceToken;
 
     if (Object.keys(updates).length === 0) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
         message: "No fields to update",
         code: "NO_UPDATE_FIELDS"
@@ -973,10 +1012,253 @@ router.put("/profile", verifyToken, async (req, res) => {
       data: updatedUser
     });
   } catch (error) {
-    return res.status(500).json({ 
+    return res.status(500).json({
       success: false,
       message: "Server error",
-      error: error.message 
+      error: error.message
+    });
+  }
+});
+
+router.put("/update-user-details", async (req, res) => {
+  try {
+    const { idToken, name, deviceToken } = req.body;
+
+    console.log('Update user details request received');
+
+    // Validate required field
+    if (!idToken) {
+      return res.status(400).json({
+        success: false,
+        message: "Firebase ID token is required",
+        code: "NO_ID_TOKEN"
+      });
+    }
+
+    // Verify Firebase token
+    console.log('Verifying Firebase token...');
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const uid = decodedToken.uid;
+    console.log('Firebase token verified successfully. UID:', uid);
+
+    // Find user by firebaseUid
+    let user = await User.findOne({ firebaseUid: uid });
+
+    if (!user) {
+      console.log('User not found with UID:', uid);
+      return res.status(404).json({
+        success: false,
+        message: "User not found. Please login first",
+        code: "USER_NOT_FOUND"
+      });
+    }
+
+    console.log('User found. User ID:', user._id);
+
+    // Prepare updates object
+    const updates = {};
+
+    if (name && name.trim() !== '') {
+      updates.name = name.trim();
+      console.log('Updating name to:', name);
+    }
+
+    if (deviceToken && deviceToken.trim() !== '') {
+      updates.deviceToken = deviceToken.trim();
+      console.log('Updating device token');
+    }
+
+    // Check if there are any updates
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No fields to update. Please provide name or deviceToken",
+        code: "NO_UPDATE_FIELDS"
+      });
+    }
+
+    // Update user
+    updates.updatedAt = Date.now();
+    const updatedUser = await User.findByIdAndUpdate(
+      user._id,
+      { $set: updates },
+      { new: true }
+    ).select("-__v");
+
+    console.log('User details updated successfully');
+
+    return res.status(200).json({
+      success: true,
+      message: "User details updated successfully",
+      data: {
+        userId: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        phoneNumber: updatedUser.phoneNumber,
+        profilePicture: updatedUser.profilePicture,
+        deviceToken: updatedUser.deviceToken,
+        role: updatedUser.role,
+        referralCode: updatedUser.referralCode,
+        isAgree: updatedUser.isAgree,
+        wallet: updatedUser.wallet
+      }
+    });
+  } catch (error) {
+    console.error('Update user details error:', {
+      message: error.message,
+      code: error.code,
+      name: error.name,
+      stack: error.stack
+    });
+
+    if (error.code === 'auth/id-token-expired') {
+      return res.status(401).json({
+        success: false,
+        message: 'Firebase token expired. Please login again',
+        code: 'FIREBASE_TOKEN_EXPIRED'
+      });
+    }
+
+    if (error.code === 'auth/argument-error') {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token format',
+        code: 'INVALID_TOKEN_FORMAT'
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update user details",
+      error: error.message,
+      errorCode: error.code,
+      errorName: error.name
+    });
+  }
+});
+
+router.post("/admin-login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    console.log('Admin login attempt received');
+
+    // Validate required fields
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required",
+        code: "MISSING_CREDENTIALS"
+      });
+    }
+
+    console.log('Verifying admin credentials...');
+
+    // Get admin credentials from environment variables
+    const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@epi.com';
+    const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Admin@123456';
+
+    // Verify credentials
+    if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
+      console.log('Invalid admin credentials provided');
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+        code: "INVALID_CREDENTIALS"
+      });
+    }
+
+    console.log('Admin credentials verified successfully');
+
+    // Check if admin user exists in database
+    let adminUser = await User.findOne({ email: ADMIN_EMAIL, role: 'admin' });
+
+    // If admin doesn't exist, create one
+    if (!adminUser) {
+      console.log('Admin user not found in database. Creating admin user...');
+
+      // Generate a unique firebaseUid for admin
+      const crypto = require('crypto');
+      const adminFirebaseUid = 'admin_' + crypto.randomBytes(8).toString('hex');
+
+      adminUser = new User({
+        name: 'Admin',
+        email: ADMIN_EMAIL,
+        firebaseUid: adminFirebaseUid,
+        role: 'admin',
+        profilePicture: '',
+        phoneNumber: '',
+        isActive: true
+      });
+
+      await adminUser.save();
+      console.log('Admin user created successfully. User ID:', adminUser._id);
+    } else {
+      console.log('Admin user found. User ID:', adminUser._id);
+    }
+
+    // Generate JWT tokens
+    console.log('Generating JWT tokens for admin...');
+    const tokens = generateTokens(adminUser._id.toString(), adminUser.role);
+    console.log('Tokens generated successfully');
+
+    return res.status(200).json({
+      success: true,
+      message: "Admin login successful",
+      data: {
+        userId: adminUser._id,
+        name: adminUser.name,
+        email: adminUser.email,
+        role: adminUser.role,
+        profilePicture: adminUser.profilePicture,
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken
+      }
+    });
+  } catch (error) {
+    console.error('Admin login error:', {
+      message: error.message,
+      code: error.code,
+      name: error.name,
+      stack: error.stack
+    });
+
+    // Handle duplicate key error
+    if (error.code === 11000) {
+      console.log('Duplicate key error during admin creation. Trying to find existing admin...');
+
+      try {
+        const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@epi.com';
+        const adminUser = await User.findOne({ email: ADMIN_EMAIL, role: 'admin' });
+
+        if (adminUser) {
+          const tokens = generateTokens(adminUser._id.toString(), adminUser.role);
+
+          return res.status(200).json({
+            success: true,
+            message: "Admin login successful",
+            data: {
+              userId: adminUser._id,
+              name: adminUser.name,
+              email: adminUser.email,
+              role: adminUser.role,
+              profilePicture: adminUser.profilePicture,
+              accessToken: tokens.accessToken,
+              refreshToken: tokens.refreshToken
+            }
+          });
+        }
+      } catch (recoveryError) {
+        console.error('Error recovering from duplicate key:', recoveryError);
+      }
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Admin login failed",
+      error: error.message,
+      errorCode: error.code,
+      errorName: error.name
     });
   }
 });
