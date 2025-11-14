@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
-const { generateReferralCode } = require('../utils/referralUtils');
+const crypto = require('crypto');
 
 const userSchema = new Schema({
   name: {
@@ -30,6 +30,10 @@ const userSchema = new Schema({
     default: ''
   },
 
+  deviceToken: {
+    type: String,
+    default: ''
+  },
   addresses: [{
     name: { type: String },
     addressLine1: { type: String, required: true },
@@ -178,10 +182,39 @@ const userSchema = new Schema({
 userSchema.pre('save', async function (next) {
   if (this.isNew && !this.referralCode) {
     try {
-      this.referralCode = await generateReferralCode();
+      console.log('Generating referral code for new user...');
+      let referralCode;
+      let isUnique = false;
+      let attempts = 0;
+      const maxAttempts = 10;
+
+      while (!isUnique && attempts < maxAttempts) {
+        // Generate a random 8-character code
+        referralCode = crypto.randomBytes(4).toString('hex').toUpperCase();
+
+        try {
+          // Check if code already exists
+          const existingUser = await mongoose.model('User').findOne({ referralCode });
+          if (!existingUser) {
+            isUnique = true;
+            console.log('Unique referral code generated:', referralCode);
+          } else {
+            attempts++;
+            console.log(`Referral code collision, trying again (attempt ${attempts})`);
+          }
+        } catch (dbError) {
+          console.error('Database error checking referral code uniqueness:', dbError);
+          // If there's a DB error, use the code anyway and let unique index handle it
+          break;
+        }
+      }
+
+      this.referralCode = referralCode;
     } catch (error) {
       console.error('Error generating referral code:', error);
       const crypto = require('crypto');
+      console.error('Error generating referral code in pre-save hook:', error);
+      // Fallback to a simple random code
       this.referralCode = crypto.randomBytes(4).toString('hex').toUpperCase();
     }
   }
