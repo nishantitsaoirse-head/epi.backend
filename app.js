@@ -8,6 +8,8 @@ const cartRoutes = require('./routes/cartRoutes'); // optional - keep if exists
 
 // NEW: categories router (ensure the path is correct relative to this file)
 const categoriesRouter = require('./routes/categoryRoutes');
+// coupon router
+const couponRoutes = require('./routes/couponRoutes');
 
 // Initialize DB connection
 connectDB();
@@ -42,6 +44,8 @@ if (process.env.SIMULATE_USER_ID) {
 // Mount routers
 app.use('/api/auth', authRoutes);
 app.use('/api/categories', categoriesRouter);
+// coupon endpoints (public + admin)
+app.use('/api', couponRoutes);
 
 // Keep your other mounts if they exist
 app.use('/', wishlistRoutes);
