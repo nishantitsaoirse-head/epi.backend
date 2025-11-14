@@ -3,7 +3,7 @@ const { deleteImageFromS3 } = require('../services/awsUploadService');
 
 /**
  * Create a new success story with image upload
- */
+ */ 
 exports.createSuccessStory = async (req, res) => {
   try {
     const { title, description, altText, displayOrder, platform } = req.body;
