@@ -7,7 +7,7 @@ const admin = require("firebase-admin");
 const initializeReferralSystem = require("./scripts/initializeReferralSystem");
 const connectDB = require("./config/database");
 
-// Routes
+// ====== ROUTES ======
 const authRoutes = require("./routes/auth");
 const productRoutes = require("./routes/products");
 const categoryRoutes = require("./routes/categoryRoutes");
@@ -28,32 +28,53 @@ const successStoryRoutes = require("./routes/successStoryRoutes");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// -----------------------------
-// CORS (LOCAL + PRODUCTION SAFE)
-// -----------------------------
+// ======================================================================
+// 🔥 PRODUCTION-COMPATIBLE CORS (FIXED, ALLOWS ADMIN PANEL + LOCALHOST)
+// ======================================================================
 app.use(
   cors({
-    origin: [
-      "http://localhost:5500",
-      "http://127.0.0.1:5500",
-      "http://localhost:3000",
-      "http://127.0.0.1:3000",
-      "https://epi-admin.vercel.app",   // admin panel production (change if needed)
-      "https://epielio.com",
-      "https://api.epielio.com"
-    ],
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    origin: (origin, callback) => {
+      const allowedOrigins = [
+        "http://localhost:5500",
+        "http://127.0.0.1:5500",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+
+        // your frontend (replace if needed)
+        "https://epielio.com",
+
+        // your backend domain
+        "https://api.epielio.com",
+
+        // your admin panel domain (if deployed)
+        "https://epi-admin.vercel.app"
+      ];
+
+      // Allow server-to-server / Postman
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("CORS blocked for: " + origin), false);
+    },
+    methods: "GET,POST,PUT,DELETE,PATCH,OPTIONS",
+    allowedHeaders: "Content-Type,Authorization",
     credentials: true,
+    preflightContinue: false,
+    optionsSuccessStatus: 200,
   })
 );
 
-// Body Parser
+// ======================================================================
+// BODY PARSER
+// ======================================================================
 app.use(express.json({ limit: "10mb" }));
 
-// Invalid JSON Handler
+// Handle invalid JSON
 app.use((err, req, res, next) => {
-  if (err && err.type === "entity.parse.failed") {
+  if (err?.type === "entity.parse.failed") {
     return res.status(400).json({
       success: false,
       message: "Invalid JSON payload",
@@ -62,9 +83,9 @@ app.use((err, req, res, next) => {
   next(err);
 });
 
-// ----------------------------------------------
-// FIREBASE ADMIN INITIALIZATION (SAFE FOR PROD)
-// ----------------------------------------------
+// ======================================================================
+// FIREBASE ADMIN INIT
+// ======================================================================
 try {
   const { FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } =
     process.env;
@@ -81,33 +102,32 @@ try {
         private_key: privateKey,
       }),
     });
-    console.log("Firebase initialized");
+    console.log("🔥 Firebase initialized");
   } else {
-    console.log("Firebase not initialized (missing keys)");
+    console.log("⚠️ Firebase not initialized (missing env vars)");
   }
 } catch (e) {
   console.error("Firebase init error:", e.message);
 }
 
-// ---------------------------
+// ======================================================================
 // MONGODB CONNECTION
-// ---------------------------
+// ======================================================================
 (async () => {
   try {
     await connectDB();
-    console.log("MongoDB Connected");
+    console.log("✅ MongoDB Connected");
 
-    // initialize referral job
     initializeReferralSystem();
   } catch (err) {
-    console.error("MongoDB connection failed:", err.message);
+    console.error("❌ MongoDB connection failed:", err.message);
     process.exit(1);
   }
 })();
 
-// ---------------------------
-// API ROUTES
-// ---------------------------
+// ======================================================================
+// ROUTES
+// ======================================================================
 app.use("/api/auth", authRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/products", productRoutes);
@@ -126,7 +146,7 @@ app.use("/api/images", imageStoreRoutes);
 app.use("/api/banners", bannerRoutes);
 app.use("/api/success-stories", successStoryRoutes);
 
-// ROOT
+// ROOT CHECK
 app.get("/", (req, res) => {
   res.send("Epi Backend API is running");
 });
@@ -134,18 +154,18 @@ app.get("/", (req, res) => {
 // GLOBAL ERROR HANDLER
 app.use((err, req, res, next) => {
   console.error("ERROR:", err.message);
-  return res.status(500).json({
+  res.status(500).json({
     success: false,
     error: err.message,
   });
 });
 
-// ---------------------------
+// ======================================================================
 // START SERVER
-// ---------------------------
+// ======================================================================
 const HOST = "0.0.0.0";
 app.listen(PORT, HOST, () => {
-  console.log(`Server running → http://${HOST}:${PORT}`);
+  console.log(`🚀 Server running at http://${HOST}:${PORT}`);
 });
 
 module.exports = app;
