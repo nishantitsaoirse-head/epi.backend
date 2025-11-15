@@ -17,11 +17,9 @@ router.post("/admin-login", async (req, res) => {
       });
     }
 
-    // Admin credentials from env
     const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@epi.com";
     const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "Admin@123456";
 
-    // Verify credentials
     if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
       return res.status(401).json({
         success: false,
@@ -29,11 +27,9 @@ router.post("/admin-login", async (req, res) => {
       });
     }
 
-    // Check if admin user exists
     let adminUser = await User.findOne({ email: ADMIN_EMAIL, role: "admin" });
 
     if (!adminUser) {
-      // Create admin if doesn't exist
       const crypto = require("crypto");
       const adminFirebaseUid = "admin_" + crypto.randomBytes(8).toString("hex");
 
@@ -50,13 +46,27 @@ router.post("/admin-login", async (req, res) => {
       await adminUser.save();
     }
 
+    // 🔥 Generate JWT token
+    const token = jwt.sign(
+      {
+        id: adminUser._id,
+        email: adminUser.email,
+        role: adminUser.role,
+      },
+      process.env.JWT_SECRET || "secretkey",
+      { expiresIn: "7d" }
+    );
+
     return res.status(200).json({
       success: true,
       message: "Admin login successful",
-      adminId: adminUser._id,
-      name: adminUser.name,
-      email: adminUser.email,
-      role: adminUser.role,
+      data: {
+        accessToken: token,
+        adminId: adminUser._id,
+        name: adminUser.name,
+        email: adminUser.email,
+        role: adminUser.role,
+      }
     });
 
   } catch (error) {
@@ -68,6 +78,7 @@ router.post("/admin-login", async (req, res) => {
     });
   }
 });
+
 
 
 
