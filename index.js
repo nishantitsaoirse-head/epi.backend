@@ -33,39 +33,28 @@ const PORT = process.env.PORT || 3000;
 // ======================================================================
 app.use(
   cors({
-    origin: (origin, callback) => {
-      const allowedOrigins = [
-        "http://localhost:5500",
-        "http://127.0.0.1:5500",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
+    origin: [
+      "http://127.0.0.1:5500",
+      "http://localhost:5500",
 
-        // your frontend (replace if needed)
-        "https://epielio.com",
+      "http://127.0.0.1:3000",
+      "http://localhost:3000",
 
-        // your backend domain
-        "https://api.epielio.com",
+      // Production frontend
+      "https://epielio.com",
 
-        // your admin panel domain (if deployed)
-        "https://epi-admin.vercel.app"
-      ];
+      // Production backend
+      "https://api.epielio.com",
 
-      // Allow server-to-server / Postman
-      if (!origin) return callback(null, true);
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      return callback(new Error("CORS blocked for: " + origin), false);
-    },
-    methods: "GET,POST,PUT,DELETE,PATCH,OPTIONS",
-    allowedHeaders: "Content-Type,Authorization",
+      // Production admin panel (if deployed)
+      "https://admin.epielio.com"
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
-    preflightContinue: false,
-    optionsSuccessStatus: 200,
   })
 );
+
 
 // ======================================================================
 // BODY PARSER
